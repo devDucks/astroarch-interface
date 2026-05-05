@@ -1,0 +1,246 @@
+"""Route /api/capture - integrazione con Ekos via DBus.
+
+Permette di pianificare una sequenza in Ekos Capture caricando un file .esq.
+"""
+from __future__ import annotations
+
+import asyncio
+import os
+import time
+from pathlib import Path
+from xml.sax.saxutils import escape
+
+from fastapi import APIRouter, Body, Depends, HTTPException
+
+from ..auth import require_token
+from ..config import get_settings
+from ..deps import Bridge, get_bridge
+
+router = APIRouter(prefix="/api/capture", tags=["capture"], dependencies=[Depends(require_token)])
+
+EKOS_DBUS_SERVICE = "org.kde.kstars"
+EKOS_CAPTURE_PATH = "/KStars/Ekos/Capture"
+
+
+def _frame_type_label(ft: str) -> str:
+    """FRAME_LIGHT -> Light"""
+    return ft.replace("FRAME_", "").capitalize()
+
+
+def _esq_for_jobs(jobs: list[dict], target_name: str = "",
+                  fits_dir: str = "") -> str:
+    """Genera XML .esq compatibile Ekos 2.x da lista di job dict."""
+    parts = ['<?xml version="1.0" encoding="UTF-8"?>',
+             "<SequenceQueue version='2.6'>",
+             "<GuideDeviation enabled='false'>2</GuideDeviation>",
+             "<HFRCheck enabled='false'><HFRDeviation>2</HFRDeviation>"
+             "<HFRCheckAlgorithm>0</HFRCheckAlgorithm>"
+             "<HFRCheckThreshold>10</HFRCheckThreshold>"
+             "<HFRCheckFrames>1</HFRCheckFrames></HFRCheck>",
+             "<RefocusOnTemperatureDelta enabled='false'>1</RefocusOnTemperatureDelta>",
+             "<RefocusEveryN enabled='false'>60</RefocusEveryN>",
+             "<RefocusOnMeridianFlip enabled='false'/>"]
+    for job in jobs:
+        f = job.get("filter") or ""
+        target = job.get("targetName") or target_name or ""
+        cap_fmt = (job.get("captureFormat") or "RAW").upper()
+        cap_fmt_label = "RAW 16" if cap_fmt == "RAW" else "RGB"
+        encoding = (job.get("transferFormat") or "FITS").upper()
+        if encoding == "NATIVE":
+            encoding = "Native"
+        gain = job.get("gain", 100)
+        offset = job.get("offset", 50)
+        bin_x = job.get("binX", 1)
+        bin_y = job.get("binY", bin_x)
+        count = int(job.get("count", 1))
+        exp = float(job.get("exposureSec", 60))
+        delay = float(job.get("delaySec", 0))
+        ft_label = _frame_type_label(job.get("frameType", "FRAME_LIGHT"))
+        dither = "1" if job.get("ditherEachFrame") else "0"
+        fits_dir_safe = fits_dir or str(Path.home() / "Pictures" / "Ekos" / "AstroarchInterface")
+        parts.append("<Job>")
+        parts.append(f"<Exposure>{exp:g}</Exposure>")
+        parts.append(f"<Format>{escape(cap_fmt_label)}</Format>")
+        parts.append(f"<Encoding>{escape(encoding)}</Encoding>")
+        parts.append(f"<Binning><X>{bin_x}</X><Y>{bin_y}</Y></Binning>")
+        parts.append("<Frame><X>0</X><Y>0</Y><W>0</W><H>0</H></Frame>")
+        if f:
+            parts.append(f"<Filter>{escape(f)}</Filter>")
+        parts.append(f"<Type>{ft_label}</Type>")
+        parts.append(f"<Count>{count}</Count>")
+        parts.append(f"<Delay>{int(delay)}</Delay>")
+        if target:
+            parts.append(f"<TargetName>{escape(target)}</TargetName>")
+        parts.append(f"<GuideDitherPerJob>{dither}</GuideDitherPerJob>")
+        parts.append(f"<FITSDirectory>{escape(fits_dir_safe)}</FITSDirectory>")
+        parts.append("<PlaceholderFormat>/%t/%T/%F/%t_%T_%F_%D</PlaceholderFormat>")
+        parts.append("<PlaceholderSuffix>1</PlaceholderSuffix>")
+        parts.append("<UploadMode>2</UploadMode>")  # 2 = Both
+        # Gain/offset come PropertyVector
+        parts.append("<Properties>")
+        parts.append(f"<PropertyVector name='CCD_CONTROLS'>"
+                     f"<OneElement name='Gain'>{gain:g}</OneElement></PropertyVector>")
+        parts.append(f"<PropertyVector name='CCD_GAIN'>"
+                     f"<OneElement name='GAIN'>{gain:g}</OneElement></PropertyVector>")
+        parts.append(f"<PropertyVector name='CCD_OFFSET'>"
+                     f"<OneElement name='OFFSET'>{offset:g}</OneElement></PropertyVector>")
+        parts.append("</Properties>")
+        parts.append("<Calibration><PreAction><Type>1</Type></PreAction>"
+                     "<FlatDuration dark='false'><Type>ADU</Type>"
+                     "<Value>25000</Value><Tolerance>1000</Tolerance>"
+                     "<SkyFlat>false</SkyFlat></FlatDuration></Calibration>")
+        parts.append("</Job>")
+    parts.append("</SequenceQueue>")
+    return "\n".join(parts)
+
+
+async def _dbus_call(*args: str, timeout: float = 10.0) -> tuple[int, str]:
+    """Esegue qdbus6 e ritorna (returncode, stdout)."""
+    env = os.environ.copy()
+    uid = os.getuid()
+    env.setdefault("DBUS_SESSION_BUS_ADDRESS", f"unix:path=/run/user/{uid}/bus")
+    proc = await asyncio.create_subprocess_exec(
+        "qdbus6", *args,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.STDOUT,
+        env=env,
+    )
+    try:
+        stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=timeout)
+    except asyncio.TimeoutError:
+        proc.kill()
+        return -1, "timeout"
+    return proc.returncode, stdout.decode("utf-8", "replace").strip()
+
+
+@router.get("/ekos_alive")
+async def ekos_alive() -> dict:
+    """Verifica se Ekos è raggiungibile via DBus."""
+    rc, out = await _dbus_call(EKOS_DBUS_SERVICE, EKOS_CAPTURE_PATH,
+                                "org.kde.kstars.Ekos.Capture.getJobCount")
+    return {
+        "alive": rc == 0,
+        "job_count": int(out) if rc == 0 and out.isdigit() else None,
+        "raw": out,
+    }
+
+
+@router.post("/ekos_run")
+async def ekos_run(payload: dict = Body(...)) -> dict:
+    """Genera ESQ dai jobs ricevuti, lo carica in Ekos Capture, avvia.
+
+    Body:
+      jobs: list di CaptureJob serializzati (vedi /api/capture/ekos_run/preview_esq)
+      target: str (target name, default "AstroarchInterface")
+      fits_dir: str opzionale
+      train: str (optical train, default "")
+      master: bool (default true)
+      auto_start: bool (default true)
+    """
+    jobs = payload.get("jobs") or []
+    if not jobs:
+        raise HTTPException(status_code=400, detail="jobs required")
+    target = payload.get("target") or "AstroarchInterface"
+    train = payload.get("train") or ""
+    master = bool(payload.get("master", True))
+    auto_start = bool(payload.get("auto_start", True))
+    fits_dir = payload.get("fits_dir") or str(get_settings().images_dir)
+
+    # Genera ESQ
+    esq = _esq_for_jobs(jobs, target_name=target, fits_dir=fits_dir)
+
+    # Salva in dir condivisa
+    save_dir = Path(fits_dir) / "AstroarchInterface"
+    save_dir.mkdir(parents=True, exist_ok=True)
+    esq_path = save_dir / f"sequence_{int(time.time())}.esq"
+    esq_path.write_text(esq, encoding="utf-8")
+
+    # Carica in Ekos via DBus
+    rc1, out1 = await _dbus_call(
+        EKOS_DBUS_SERVICE, EKOS_CAPTURE_PATH,
+        "org.kde.kstars.Ekos.Capture.clearSequenceQueue",
+    )
+    rc2, out2 = await _dbus_call(
+        EKOS_DBUS_SERVICE, EKOS_CAPTURE_PATH,
+        "org.kde.kstars.Ekos.Capture.loadSequenceQueue",
+        str(esq_path),
+        train,
+        "true" if master else "false",
+        target,
+    )
+    if rc2 != 0 or out2.lower() == "false":
+        raise HTTPException(status_code=500, detail=f"loadSequenceQueue failed: {out2}")
+
+    started = False
+    start_msg = ""
+    if auto_start:
+        rc3, out3 = await _dbus_call(
+            EKOS_DBUS_SERVICE, EKOS_CAPTURE_PATH,
+            "org.kde.kstars.Ekos.Capture.start", train,
+        )
+        started = rc3 == 0
+        start_msg = out3
+    return {
+        "ok": True,
+        "esq_path": str(esq_path),
+        "loaded": rc2 == 0,
+        "load_response": out2,
+        "started": started,
+        "start_response": start_msg,
+        "jobs_count": len(jobs),
+    }
+
+
+@router.get("/ekos_status")
+async def ekos_status() -> dict:
+    """Stato live della sequenza Ekos Capture."""
+    out: dict = {}
+    rc, val = await _dbus_call(EKOS_DBUS_SERVICE, EKOS_CAPTURE_PATH,
+                                "org.kde.kstars.Ekos.Capture.getJobCount")
+    out["job_count"] = int(val) if rc == 0 and val.isdigit() else 0
+    rc, val = await _dbus_call(EKOS_DBUS_SERVICE, EKOS_CAPTURE_PATH,
+                                "org.kde.kstars.Ekos.Capture.getActiveJobID")
+    out["active_job_id"] = int(val) if rc == 0 and val.lstrip("-").isdigit() else None
+    rc, val = await _dbus_call(EKOS_DBUS_SERVICE, EKOS_CAPTURE_PATH,
+                                "org.kde.kstars.Ekos.Capture.getActiveJobRemainingTime")
+    out["remaining_seconds"] = int(val) if rc == 0 and val.lstrip("-").isdigit() else None
+    rc, val = await _dbus_call(EKOS_DBUS_SERVICE, EKOS_CAPTURE_PATH,
+                                "org.kde.kstars.Ekos.Capture.getOverallRemainingTime")
+    out["overall_remaining_seconds"] = int(val) if rc == 0 and val.lstrip("-").isdigit() else None
+    if out.get("active_job_id") is not None and out["active_job_id"] >= 0:
+        rc, val = await _dbus_call(EKOS_DBUS_SERVICE, EKOS_CAPTURE_PATH,
+                                    "org.kde.kstars.Ekos.Capture.getJobImageProgress",
+                                    str(out["active_job_id"]))
+        out["job_image_progress"] = int(val) if rc == 0 and val.lstrip("-").isdigit() else None
+        rc, val = await _dbus_call(EKOS_DBUS_SERVICE, EKOS_CAPTURE_PATH,
+                                    "org.kde.kstars.Ekos.Capture.getJobImageCount",
+                                    str(out["active_job_id"]))
+        out["job_image_count"] = int(val) if rc == 0 and val.lstrip("-").isdigit() else None
+        rc, val = await _dbus_call(EKOS_DBUS_SERVICE, EKOS_CAPTURE_PATH,
+                                    "org.kde.kstars.Ekos.Capture.getJobState",
+                                    str(out["active_job_id"]))
+        out["job_state"] = val if rc == 0 else None
+    return out
+
+
+@router.post("/ekos_abort")
+async def ekos_abort() -> dict:
+    rc, out = await _dbus_call(EKOS_DBUS_SERVICE, EKOS_CAPTURE_PATH,
+                                "org.kde.kstars.Ekos.Capture.abort", "")
+    return {"ok": rc == 0, "raw": out}
+
+
+@router.post("/ekos_clear")
+async def ekos_clear() -> dict:
+    rc, out = await _dbus_call(EKOS_DBUS_SERVICE, EKOS_CAPTURE_PATH,
+                                "org.kde.kstars.Ekos.Capture.clearSequenceQueue")
+    return {"ok": rc == 0, "raw": out}
+
+
+@router.post("/preview_esq")
+async def preview_esq(payload: dict = Body(...)) -> dict:
+    """Genera ESQ ma non lo invia. Utile per debug."""
+    jobs = payload.get("jobs") or []
+    target = payload.get("target") or ""
+    fits_dir = payload.get("fits_dir") or str(get_settings().images_dir)
+    return {"esq": _esq_for_jobs(jobs, target_name=target, fits_dir=fits_dir)}

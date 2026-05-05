@@ -1,0 +1,539 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../api/api_client.dart';
+import '../state/app_state.dart';
+import '../state/capture_job.dart';
+import '../theme/app_theme.dart';
+import '../widgets/common.dart';
+import 'capture/cooler_panel.dart';
+import 'capture/job_form.dart';
+import 'capture/sequence_runner.dart';
+import 'observation_screen.dart';
+import 'shell_screen.dart';
+
+class CaptureScreen extends StatefulWidget {
+  const CaptureScreen({super.key});
+  @override
+  State<CaptureScreen> createState() => _CaptureScreenState();
+}
+
+class _CaptureScreenState extends State<CaptureScreen> {
+  final TextEditingController _tempCtl = TextEditingController(text: '-10');
+  late final SequenceRunner _runner;
+  bool _runnerInited = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      final s = context.read<AppState>();
+      s.loadCaptureJobs();
+      _runner = SequenceRunner(s);
+      _runner.addListener(_onRunnerChange);
+      setState(() => _runnerInited = true);
+    });
+  }
+
+  @override
+  void dispose() {
+    if (_runnerInited) _runner.removeListener(_onRunnerChange);
+    _tempCtl.dispose();
+    super.dispose();
+  }
+
+  void _onRunnerChange() => setState(() {});
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<AppState>();
+    final cams = s.cameraDevices;
+    final cam = s.effectiveDevice('camera');
+    final filterDev = s.effectiveDevice('filter_wheel');
+    final filterNames = _filterNames(s, filterDev);
+
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: openShellDrawer),
+        title: Text(cam == null ? 'Capture' : 'Capture · $cam', overflow: TextOverflow.ellipsis),
+        actions: [
+          IconButton(
+            tooltip: 'Preset',
+            icon: const Icon(Icons.bookmark_border),
+            onPressed: _showPresets,
+          ),
+        ],
+      ),
+      body: cams.isEmpty
+          ? Center(child: Text('Nessuna camera connessa', style: TextStyle(color: T.muted(context))))
+          : ListView(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 80),
+              children: [
+                if (cams.length > 1) _devicePicker(s, cams),
+                if (cam != null) ...[
+                  CoolerPanel(camera: cam, tempCtl: _tempCtl),
+                  const SectionLabel('Sequenza jobs', /* trailing handled below */),
+                  _jobsList(s),
+                  const SizedBox(height: 8),
+                  Row(children: [
+                    Expanded(child: GhostButton(
+                      label: 'NUOVO JOB', icon: Icons.add,
+                      onPressed: _runnerInited && _runner.running ? null
+                          : () => _editJob(s, null, filterNames),
+                    )),
+                    const SizedBox(width: 8),
+                    Expanded(child: GhostButton(
+                      label: 'CANCELLA TUTTI', icon: Icons.delete_outline, danger: true,
+                      onPressed: s.captureJobs.isEmpty || (_runnerInited && _runner.running)
+                          ? null : () async {
+                              final ok = await showDialog<bool>(context: context, builder: (c) => AlertDialog(
+                                backgroundColor: T.panel(context),
+                                title: const Text('Cancella tutti i job?'),
+                                actions: [
+                                  TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('NO')),
+                                  ElevatedButton(onPressed: () => Navigator.pop(c, true), child: const Text('CANCELLA')),
+                                ],
+                              ));
+                              if (ok == true) {
+                                s.captureJobs.clear();
+                                s.saveCaptureJobs();
+                                s.notifyListeners();
+                              }
+                            },
+                    )),
+                  ]),
+                  if (_runnerInited && (_runner.running || _runner.statusMsg != null))
+                    _runStatus(),
+                  const SizedBox(height: 14),
+                  _runControls(s, cam, filterDev),
+                ],
+              ],
+            ),
+    );
+  }
+
+  Widget _devicePicker(AppState s, List<String> cams) {
+    final sel = s.selectedCamera ?? s.primaryCameraAuto ?? (cams.length == 1 ? cams.first : null);
+    String roleTag(String c) {
+      if (c == s.primaryCameraAuto) return ' · primary';
+      if (c == s.guideCameraAuto) return ' · guide';
+      return '';
+    }
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: T.panel(context), borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: T.line(context)),
+        ),
+        child: Row(children: [
+          Icon(Icons.camera_alt, size: 16, color: T.muted(context)),
+          const SizedBox(width: 8),
+          Text('Camera:', style: TextStyle(color: T.muted(context), fontSize: 11, letterSpacing: 1)),
+          const SizedBox(width: 8),
+          Expanded(child: DropdownButtonHideUnderline(
+            child: DropdownButton<String?>(
+              value: sel, isExpanded: true,
+              hint: Text('— scegli —', style: TextStyle(color: T.warn(context), fontSize: 13)),
+              dropdownColor: T.panel(context),
+              style: TextStyle(color: T.text(context), fontSize: 13, fontWeight: FontWeight.w600),
+              items: [
+                for (final c in cams)
+                  DropdownMenuItem(value: c, child: Text(c + roleTag(c), overflow: TextOverflow.ellipsis)),
+              ],
+              onChanged: (v) => s.setSelectedDevice('camera', v),
+            ),
+          )),
+        ]),
+      ),
+    );
+  }
+
+  Widget _jobsList(AppState s) {
+    if (s.captureJobs.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: T.panel(context), borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: T.line(context)),
+        ),
+        child: Center(
+          child: Text('Nessun job · Tap "+ NUOVO JOB" per pianificare',
+              style: TextStyle(color: T.muted(context), fontSize: 12)),
+        ),
+      );
+    }
+    return ReorderableListView(
+      shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+      buildDefaultDragHandles: true,
+      onReorder: (o, n) => s.reorderCaptureJobs(o, n),
+      children: [
+        for (int i = 0; i < s.captureJobs.length; i++)
+          _jobTile(s, i, s.captureJobs[i]),
+      ],
+    );
+  }
+
+  Widget _jobTile(AppState s, int idx, CaptureJob job) {
+    final filterNames = _filterNames(s, s.effectiveDevice('filter_wheel'));
+    Color stateColor;
+    IconData stateIcon;
+    switch (job.status) {
+      case CaptureJobStatus.running:
+        stateColor = T.accent(context); stateIcon = Icons.play_circle_fill; break;
+      case CaptureJobStatus.done:
+        stateColor = T.ok(context); stateIcon = Icons.check_circle; break;
+      case CaptureJobStatus.failed:
+        stateColor = T.err(context); stateIcon = Icons.error; break;
+      case CaptureJobStatus.aborted:
+        stateColor = T.warn(context); stateIcon = Icons.cancel; break;
+      case CaptureJobStatus.paused:
+        stateColor = T.warn(context); stateIcon = Icons.pause_circle; break;
+      default:
+        stateColor = T.muted(context); stateIcon = Icons.radio_button_unchecked;
+    }
+    return Container(
+      key: ValueKey(job.id),
+      margin: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.fromLTRB(10, 8, 4, 8),
+      decoration: BoxDecoration(
+        color: T.panel(context), borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: job.status == CaptureJobStatus.running
+            ? T.accent(context).withValues(alpha: 0.5) : T.line(context)),
+      ),
+      child: Row(children: [
+        Icon(stateIcon, color: stateColor, size: 18),
+        const SizedBox(width: 8),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(job.summary,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+          Row(children: [
+            Text('gain ${job.gain.toInt()} · off ${job.offset.toInt()} · bin ${job.binX}×${job.binY} · ${job.transferFormat}',
+                style: TextStyle(color: T.muted(context), fontSize: 10)),
+            if (job.ditherEachFrame) ...[
+              const SizedBox(width: 6),
+              Icon(Icons.scatter_plot, size: 10, color: T.accent2(context)),
+            ],
+          ]),
+          if (job.status == CaptureJobStatus.running ||
+              job.status == CaptureJobStatus.done ||
+              job.doneCount > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(2),
+                child: LinearProgressIndicator(
+                  value: job.count == 0 ? 0 : job.doneCount / job.count,
+                  minHeight: 3,
+                  backgroundColor: T.line(context),
+                  color: stateColor,
+                ),
+              ),
+            ),
+          if (job.lastError != null)
+            Text('⚠ ${job.lastError}',
+                style: TextStyle(color: T.err(context), fontSize: 10)),
+        ])),
+        Text('${job.doneCount}/${job.count}',
+            style: TextStyle(color: T.muted(context), fontFamily: 'monospace', fontSize: 11)),
+        PopupMenuButton<String>(
+          icon: Icon(Icons.more_vert, color: T.muted(context), size: 18),
+          color: T.panel(context),
+          onSelected: (v) {
+            if (v == 'edit') _editJob(s, idx, filterNames);
+            if (v == 'dup') s.duplicateCaptureJob(idx);
+            if (v == 'del') s.removeCaptureJob(idx);
+          },
+          itemBuilder: (c) => const [
+            PopupMenuItem(value: 'edit', child: Text('Modifica')),
+            PopupMenuItem(value: 'dup', child: Text('Duplica')),
+            PopupMenuItem(value: 'del', child: Text('Rimuovi')),
+          ],
+        ),
+      ]),
+    );
+  }
+
+  Future<void> _editJob(AppState s, int? idx, List<String> filters) async {
+    final initial = idx == null ? null : s.captureJobs[idx];
+    final result = await Navigator.push<CaptureJob>(context, MaterialPageRoute(
+      builder: (_) => JobFormScreen(initial: initial, filters: filters),
+    ));
+    if (result == null) return;
+    if (idx == null) { s.addCaptureJob(result); }
+    else { s.updateCaptureJob(idx, result); }
+  }
+
+  List<String> _filterNames(AppState s, String? filterDev) {
+    if (filterDev == null) return [];
+    final p = s.prop(filterDev, 'FILTER_NAME');
+    if (p == null) return [];
+    return (p['elements'] as List? ?? [])
+        .map((e) => (e['value'] ?? e['name']).toString())
+        .where((x) => x.isNotEmpty).toList();
+  }
+
+  Widget _runStatus() {
+    final r = _runner;
+    return Container(
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: T.panel(context), borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: T.accent(context).withValues(alpha: 0.4)),
+      ),
+      child: Row(children: [
+        if (r.running)
+          SizedBox(width: 14, height: 14,
+              child: CircularProgressIndicator(strokeWidth: 2, color: T.accent(context)))
+        else
+          Icon(Icons.check_circle, color: T.ok(context), size: 16),
+        const SizedBox(width: 8),
+        Expanded(child: Text(r.statusMsg ?? '',
+            style: const TextStyle(fontSize: 12, fontFamily: 'monospace'))),
+      ]),
+    );
+  }
+
+  Widget _runControls(AppState s, String camera, String? filterDev) {
+    if (!_runnerInited) return const SizedBox();
+    final hasJobs = s.captureJobs.isNotEmpty;
+    return Row(children: [
+      if (!_runner.running)
+        Expanded(child: PrimaryButton(
+          label: 'AVVIA SEQUENZA', icon: Icons.play_arrow,
+          onPressed: hasJobs ? () => _confirmAndRun(s, camera, filterDev) : null,
+        ))
+      else if (_runner.paused)
+        Expanded(child: PrimaryButton(
+          label: 'RIPRENDI', icon: Icons.play_arrow,
+          onPressed: () => _runner.resume(),
+        ))
+      else
+        Expanded(child: GhostButton(
+          label: 'PAUSA', icon: Icons.pause,
+          onPressed: () => _runner.pause(),
+        )),
+      const SizedBox(width: 8),
+      Expanded(child: GhostButton(
+        label: 'ABORT', icon: Icons.stop, danger: true,
+        onPressed: _runner.running ? () => _runner.abort() : null,
+      )),
+    ]);
+  }
+
+  Future<void> _confirmAndRun(AppState s, String camera, String? filterDev) async {
+    final n = s.captureJobs.length;
+    final totalSec = s.captureJobs.fold<double>(
+      0, (acc, j) => acc + (j.count * j.exposureSec) + ((j.count - 1).clamp(0, j.count) * j.delaySec));
+    final mins = (totalSec / 60).ceil();
+
+    final choice = await showDialog<String>(context: context, builder: (c) => AlertDialog(
+      backgroundColor: T.panel(context),
+      title: const Text('Avvia sequenza'),
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('$n job · durata stimata ~$mins min',
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 12),
+          Text('Come vuoi eseguire la sequenza?',
+              style: TextStyle(color: T.muted(context), fontSize: 12)),
+          const SizedBox(height: 14),
+          // Opzione 0: Osservazione completa (pre-flight)
+          InkWell(
+            onTap: () => Navigator.pop(c, 'observation'),
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: T.ok(context).withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: T.ok(context).withValues(alpha: 0.7), width: 1.5),
+              ),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Icon(Icons.auto_awesome, color: T.ok(context), size: 16),
+                  const SizedBox(width: 6),
+                  Text('OSSERVAZIONE COMPLETA  ⭐',
+                      style: TextStyle(color: T.ok(context), fontWeight: FontWeight.w700)),
+                ]),
+                const SizedBox(height: 4),
+                Text('Slew → plate solve → sync → guide start → cattura. '
+                    'Tutta la pipeline pre-flight come Ekos Scheduler.',
+                    style: TextStyle(color: T.muted(context), fontSize: 11)),
+              ]),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Opzione 1: via Ekos
+          InkWell(
+            onTap: () => Navigator.pop(c, 'ekos'),
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: T.accent(context).withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: T.accent(context).withValues(alpha: 0.6)),
+              ),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Icon(Icons.star, color: T.accent(context), size: 16),
+                  const SizedBox(width: 6),
+                  Text('VIA EKOS (consigliato)',
+                      style: TextStyle(color: T.accent(context), fontWeight: FontWeight.w700)),
+                ]),
+                const SizedBox(height: 4),
+                Text('I job appaiono nella Capture queue di Ekos. '
+                    'Ekos gestisce dither, autofocus, naming, meridian flip.',
+                    style: TextStyle(color: T.muted(context), fontSize: 11)),
+              ]),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Opzione 2: diretto
+          InkWell(
+            onTap: () => Navigator.pop(c, 'direct'),
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: T.line(context)),
+              ),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Icon(Icons.bolt, color: T.muted(context), size: 16),
+                  const SizedBox(width: 6),
+                  const Text('DIRETTO (via INDI)',
+                      style: TextStyle(fontWeight: FontWeight.w700)),
+                ]),
+                const SizedBox(height: 4),
+                Text('Comando diretto al driver INDI. '
+                    'Ekos non vede la sequenza nella sua UI.',
+                    style: TextStyle(color: T.muted(context), fontSize: 11)),
+              ]),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(filterDev == null
+              ? 'No filter wheel: filter ignorato per ogni job.'
+              : 'Filter wheel: $filterDev',
+              style: TextStyle(color: T.muted(context), fontSize: 11)),
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(c), child: const Text('ANNULLA')),
+      ],
+    ));
+
+    if (choice == 'observation') {
+      if (!mounted) return;
+      Navigator.push(context, MaterialPageRoute(
+        builder: (_) => ObservationScreen(jobs: List.of(s.captureJobs)),
+      ));
+    } else if (choice == 'ekos') {
+      await _runViaEkos(s);
+    } else if (choice == 'direct') {
+      await _runner.run(camera: camera, filterWheel: filterDev);
+    }
+  }
+
+  Future<void> _runViaEkos(AppState s) async {
+    if (s.api == null) return;
+    try {
+      // Verifica Ekos vivo
+      final alive = await s.api!.captureEkosAlive();
+      if (alive['alive'] != true) {
+        if (!mounted) return;
+        showSnack(context, 'Ekos non raggiungibile via DBus', error: true);
+        return;
+      }
+      // Trova target name (dal primo job se presente)
+      String? target;
+      for (final j in s.captureJobs) {
+        if (j.targetName != null && j.targetName!.isNotEmpty) {
+          target = j.targetName; break;
+        }
+      }
+      final r = await s.api!.captureEkosRun(
+        jobs: s.captureJobs.map((j) => j.toJson()).toList(),
+        target: target,
+        autoStart: true,
+      );
+      if (!mounted) return;
+      if (r['loaded'] == true && r['started'] == true) {
+        showSnack(context,
+            'Sequenza inviata a Ekos · ${r['jobs_count']} job · train "${r['start_response']}"');
+      } else {
+        showSnack(context, 'Errore: ${r['load_response'] ?? r}', error: true);
+      }
+    } on ApiException catch (e) {
+      if (mounted) showSnack(context, 'Errore: ${e.body}', error: true);
+    } catch (e) {
+      if (mounted) showSnack(context, 'Errore: $e', error: true);
+    }
+  }
+
+  Future<void> _showPresets() async {
+    final s = context.read<AppState>();
+    final presets = await CaptureJobsStore.loadPresets();
+    if (!mounted) return;
+    showModalBottomSheet(context: context, backgroundColor: T.panel(context), builder: (c) {
+      return SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        ListTile(
+          leading: const Icon(Icons.save),
+          title: const Text('Salva sequenza corrente come preset'),
+          onTap: () async {
+            Navigator.pop(c);
+            final name = await _askName('Nome preset');
+            if (name != null && name.isNotEmpty) {
+              await CaptureJobsStore.savePreset(name, s.captureJobs);
+              if (mounted) showSnack(context, 'Preset "$name" salvato');
+            }
+          },
+        ),
+        const Divider(),
+        if (presets.isEmpty)
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Text('Nessun preset salvato', style: TextStyle(color: T.muted(context))),
+          )
+        else for (final entry in presets.entries)
+          ListTile(
+            leading: const Icon(Icons.bookmark),
+            title: Text(entry.key),
+            subtitle: Text('${entry.value.length} job'),
+            trailing: IconButton(
+              icon: Icon(Icons.delete_outline, color: T.err(context), size: 18),
+              onPressed: () async {
+                await CaptureJobsStore.deletePreset(entry.key);
+                if (mounted) Navigator.pop(c);
+              },
+            ),
+            onTap: () {
+              s.captureJobs = List.of(entry.value);
+              s.saveCaptureJobs();
+              s.notifyListeners();
+              Navigator.pop(c);
+              showSnack(context, 'Caricato preset "${entry.key}"');
+            },
+          ),
+      ]));
+    });
+  }
+
+  Future<String?> _askName(String label) async {
+    final ctl = TextEditingController();
+    return showDialog<String>(context: context, builder: (c) => AlertDialog(
+      backgroundColor: T.panel(context),
+      title: Text(label),
+      content: TextField(controller: ctl, autofocus: true,
+          decoration: const InputDecoration(hintText: 'es. M31 LRGB')),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(c), child: const Text('ANNULLA')),
+        ElevatedButton(onPressed: () => Navigator.pop(c, ctl.text.trim()), child: const Text('OK')),
+      ],
+    ));
+  }
+}
