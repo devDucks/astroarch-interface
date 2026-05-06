@@ -1,19 +1,18 @@
-"""Genera il manuale PDF di Astroarch Interface.
+"""Generate the Astroarch Interface user manual PDF (English).
 
-Sviluppatore: Zarletti-Osservatorio Jupiter
+Author: Zarletti-Osservatorio Jupiter
 """
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import cm, mm
+from reportlab.lib.units import cm
 from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer,
-                                 PageBreak, Table, TableStyle, KeepTogether,
+                                 PageBreak, Table, TableStyle,
                                  ListFlowable, ListItem)
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY
-from reportlab.pdfgen import canvas as canvas_module
+from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
 from datetime import datetime
 
-OUTPUT = r"C:/Users/Zarletti/Desktop/AstroarchInterface_Manuale.pdf"
+OUTPUT = r"C:/Users/Zarletti/Desktop/AstroArch_Mobile/AstroarchInterface_Manual.pdf"
 
 # Palette
 ACCENT = colors.HexColor("#c98612")
@@ -27,7 +26,7 @@ ERR = colors.HexColor("#b3303f")
 
 styles = getSampleStyleSheet()
 
-# Custom styles
+
 def make_styles():
     styles.add(ParagraphStyle(
         name="DocTitle", fontSize=28, leading=32, alignment=TA_CENTER,
@@ -67,16 +66,13 @@ def make_styles():
 
 
 def page_layout(canvas, doc):
-    """Header/footer su ogni pagina."""
     canvas.saveState()
     w, h = A4
-    # Footer
     canvas.setFont("Helvetica", 8)
     canvas.setFillColor(MUTED)
-    canvas.drawString(2 * cm, 1 * cm, "Astroarch Interface - Manuale utente")
+    canvas.drawString(2 * cm, 1 * cm, "Astroarch Interface - User Manual")
     canvas.drawCentredString(w / 2, 1 * cm, "Zarletti-Osservatorio Jupiter")
-    canvas.drawRightString(w - 2 * cm, 1 * cm, f"Pag. {doc.page}")
-    # Header line (skip on cover)
+    canvas.drawRightString(w - 2 * cm, 1 * cm, f"Page {doc.page}")
     if doc.page > 1:
         canvas.setStrokeColor(LINE)
         canvas.line(2 * cm, h - 1.5 * cm, w - 2 * cm, h - 1.5 * cm)
@@ -85,49 +81,41 @@ def page_layout(canvas, doc):
         canvas.drawString(2 * cm, h - 1.2 * cm, "ASTROARCH INTERFACE")
         canvas.setFillColor(MUTED)
         canvas.setFont("Helvetica", 8)
-        canvas.drawRightString(w - 2 * cm, h - 1.2 * cm, "v0.2.4")
+        canvas.drawRightString(w - 2 * cm, h - 1.2 * cm, "v0.2.12")
     canvas.restoreState()
 
 
 def cover_layout(canvas, doc):
-    """Cover speciale con sfondo gradient."""
     canvas.saveState()
     w, h = A4
-    # Sfondo dark
     canvas.setFillColor(colors.HexColor("#0a0d12"))
     canvas.rect(0, 0, w, h, stroke=0, fill=1)
-    # Banda accent in alto
     canvas.setFillColor(ACCENT_LIGHT)
     canvas.rect(0, h - 0.8 * cm, w, 0.8 * cm, stroke=0, fill=1)
-    # Titolo
     canvas.setFont("Helvetica-Bold", 38)
     canvas.setFillColor(colors.white)
     canvas.drawCentredString(w / 2, h - 6 * cm, "Astroarch")
     canvas.setFillColor(ACCENT_LIGHT)
     canvas.drawCentredString(w / 2, h - 7.5 * cm, "Interface")
-    # Sottotitolo
     canvas.setFont("Helvetica", 14)
     canvas.setFillColor(colors.HexColor("#8a93a6"))
     canvas.drawCentredString(w / 2, h - 9 * cm,
-                              "Controllo remoto osservatorio AstroArch da smartphone Android")
-    # Logo decorativo (cerchio)
+                              "Remote control of an AstroArch observatory from Android")
     canvas.setStrokeColor(ACCENT_LIGHT)
     canvas.setLineWidth(2)
     canvas.circle(w / 2, h - 13 * cm, 1.8 * cm, stroke=1, fill=0)
     canvas.setFont("Helvetica-Bold", 28)
     canvas.setFillColor(ACCENT_LIGHT)
     canvas.drawCentredString(w / 2, h - 13.4 * cm, "*")
-    # Footer cover
     canvas.setFont("Helvetica", 11)
     canvas.setFillColor(colors.HexColor("#e6eaf2"))
-    canvas.drawCentredString(w / 2, 4 * cm, "Manuale Utente e Installazione")
+    canvas.drawCentredString(w / 2, 4 * cm, "User Manual & Installation Guide")
     canvas.setFont("Helvetica", 10)
     canvas.setFillColor(colors.HexColor("#8a93a6"))
-    canvas.drawCentredString(w / 2, 3.3 * cm, "Versione 0.2.4")
-    canvas.drawCentredString(w / 2, 2.7 * cm, "Sviluppatore: Zarletti-Osservatorio Jupiter")
+    canvas.drawCentredString(w / 2, 3.3 * cm, "Version 0.2.12")
+    canvas.drawCentredString(w / 2, 2.7 * cm, "Author: Zarletti-Osservatorio Jupiter")
     canvas.drawCentredString(w / 2, 2.1 * cm,
-                              datetime.now().strftime("%d %B %Y"))
-    # Banda accent in basso
+                              datetime.now().strftime("%B %d, %Y"))
     canvas.setFillColor(ACCENT_LIGHT)
     canvas.rect(0, 0, w, 0.8 * cm, stroke=0, fill=1)
     canvas.restoreState()
@@ -144,8 +132,8 @@ def CODE(t):
     safe = t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
     safe = safe.replace("\n", "<br/>")
     return Paragraph(f'<font face="Courier">{safe}</font>', styles["Mono"])
-def NOTE(t): return Paragraph(f"<b>Nota:</b> {t}", styles["Note"])
-def WARN(t): return Paragraph(f"<b>Attenzione:</b> {t}", styles["Warning"])
+def NOTE(t): return Paragraph(f"<b>Note:</b> {t}", styles["Note"])
+def WARN(t): return Paragraph(f"<b>Warning:</b> {t}", styles["Warning"])
 
 
 def kv_table(rows, widths=None):
@@ -187,521 +175,539 @@ def grid_table(header, rows, col_widths=None):
     return t
 
 
-# ----------------------------------------------------------------------------
-# COSTRUZIONE DOCUMENTO
-# ----------------------------------------------------------------------------
+# ============================================================================
+# DOCUMENT
+# ============================================================================
 
 story = []
 
-# COVER (rendered via cover_layout, content vuoto qui)
+# Cover
 story.append(Spacer(1, 24 * cm))
 story.append(PageBreak())
 
-# ============================================================================
-# 1. INTRODUZIONE
-# ============================================================================
-story.append(H1("1. Introduzione"))
+# 1. INTRODUCTION
+story.append(H1("1. Introduction"))
 story.append(P(
-    "<b>Astroarch Interface</b> è un'applicazione Android che permette di controllare "
-    "in modo completo un osservatorio astronomico basato sulla distribuzione "
-    "<b>AstroArch</b> (Arch Linux per RaspberryPi con KStars/Ekos/INDI) installata "
-    "su un Raspberry Pi 5. L'app si collega via Tailscale al RaspberryPi e replica "
-    "in tempo reale tutte le funzioni di Ekos in formato mobile-friendly."))
-story.append(P(
-    "Il progetto è composto da due parti:"))
+    "<b>Astroarch Interface</b> is an Android application that lets you fully "
+    "control an astronomical observatory based on the <b>AstroArch</b> "
+    "distribution (Arch Linux for Raspberry Pi with KStars/Ekos/INDI) running "
+    "on a Raspberry Pi 5. The app connects to the Raspberry Pi via Tailscale "
+    "and mirrors all Ekos features in real time using a mobile-friendly UI."))
+story.append(P("The project is split in two parts:"))
 story.append(ListFlowable([
-    ListItem(P("<b>Backend astroarch-bridge</b>: daemon Python (FastAPI + WebSocket) "
-               "installato sul RaspberryPi 5. Comunica con il server INDI, PHD2 e "
-               "Ekos via DBus, esponendo una REST API + due stream WebSocket all'app.")),
-    ListItem(P("<b>App Android</b>: scritta in Flutter, fornisce 14 schermate dedicate "
-               "ai vari moduli Ekos clonati per uso mobile.")),
+    ListItem(P("<b>astroarch-bridge backend</b>: a Python daemon (FastAPI + "
+               "WebSocket) installed on the Raspberry Pi 5. It talks to the "
+               "INDI server, PHD2 and Ekos via DBus, exposing a REST API + "
+               "two WebSocket streams to the app.")),
+    ListItem(P("<b>Android app</b>: written in Flutter, with 14 dedicated "
+               "screens covering all the Ekos modules cloned for mobile use.")),
 ], bulletType="bullet", leftIndent=20))
 
-story.append(H2("1.1 Cosa puoi fare con l'app"))
+story.append(H2("1.1 What you can do"))
 story.append(ListFlowable([
-    ListItem(P("Visualizzare in tempo reale lo stato di mount, camera, focuser, "
-               "filter wheel, dome, weather (telemetria live via WebSocket)")),
-    ListItem(P("Pianificare ed eseguire sequenze multi-job di scatti come in Ekos")),
-    ListItem(P("Eseguire una pipeline pre-flight completa: slew → plate solve → sync → "
-               "guide → autofocus → cattura, in un click")),
-    ListItem(P("Cercare oggetti per nome (SIMBAD) e fare GoTo con un tap")),
-    ListItem(P("Controllare PHD2 (calibrazione, guiding, dither) con grafico RMS live")),
-    ListItem(P("Controllare il focheggiatore manualmente o avviare autofocus iterativo "
-               "con plot V-curve in tempo reale")),
-    ListItem(P("Effettuare plate solving via solve-field astrometry.net e sincronizzare "
-               "la mount sul risultato")),
-    ListItem(P("Vedere live le immagini scattate (FITS auto-stretchato in JPEG via WebSocket)")),
-    ListItem(P("Modificare qualsiasi proprietà INDI dal pannello clone della Ekos INDI Control Panel")),
-    ListItem(P("Pianificare jobs scheduler con condizioni twilight, altitudine target, weather")),
+    ListItem(P("Real-time view of mount, camera, focuser, filter wheel, "
+               "dome and weather state (live telemetry over WebSocket)")),
+    ListItem(P("Plan and run multi-job capture sequences just like in Ekos")),
+    ListItem(P("Run a full pre-flight pipeline: slew → plate solve → "
+               "sync → guide → autofocus → capture, in one tap")),
+    ListItem(P("Search objects by name (SIMBAD) and GoTo with one tap")),
+    ListItem(P("Control PHD2 (calibration, guiding, dither) with a live RMS chart")),
+    ListItem(P("Control the focuser manually or trigger an iterative autofocus "
+               "with a live V-curve plot")),
+    ListItem(P("Run plate solving via solve-field/astrometry.net and sync the "
+               "mount on the result")),
+    ListItem(P("View captured images live (FITS auto-stretched to JPEG over WebSocket)")),
+    ListItem(P("Edit any INDI property from the panel that clones the Ekos "
+               "INDI Control Panel")),
+    ListItem(P("Plan scheduler jobs with twilight/altitude/weather conditions")),
 ], bulletType="bullet", leftIndent=20))
 
-story.append(H2("1.2 Architettura"))
-story.append(P("Schema di alto livello del flusso dati:"))
+story.append(H2("1.2 Architecture"))
+story.append(P("High-level data flow:"))
 story.append(CODE(
-    "App Android  ──Tailscale (WireGuard)──▶  Raspberry Pi 5\n"
-    "                                          ├─ astroarch-bridge :8765\n"
-    "                                          │   ├─ REST  /api/*\n"
-    "                                          │   ├─ WS    /ws/state  (clone live)\n"
-    "                                          │   └─ WS    /ws/frames (JPEG live)\n"
-    "                                          ├─ INDI server :7624\n"
-    "                                          ├─ PHD2 :4400 (JSON-RPC)\n"
-    "                                          ├─ KStars/Ekos (DBus)\n"
-    "                                          └─ ~/Pictures/Ekos (FITS storage)"))
-
-story.append(NOTE("Tailscale fornisce cifratura WireGuard end-to-end. Non serve "
-                  "configurare HTTPS sopra: la porta 8765 è esposta in chiaro ma il "
-                  "tunnel Tailscale rende il traffico inaccessibile a chiunque non "
-                  "sia nella tua tailnet."))
+    "Android app  --Tailscale (WireGuard)-->  Raspberry Pi 5\n"
+    "                                          |- astroarch-bridge :8765\n"
+    "                                          |   |- REST  /api/*\n"
+    "                                          |   |- WS    /ws/state  (live clone)\n"
+    "                                          |   |- WS    /ws/frames (JPEG live)\n"
+    "                                          |- INDI server :7624\n"
+    "                                          |- PHD2 :4400 (JSON-RPC)\n"
+    "                                          |- KStars/Ekos (DBus)\n"
+    "                                          |- ~/Pictures/Ekos (FITS storage)"))
+story.append(NOTE("Tailscale provides end-to-end WireGuard encryption. There is "
+                  "no need to set up HTTPS on top: port 8765 is exposed in "
+                  "cleartext but the Tailscale tunnel makes the traffic "
+                  "inaccessible to anyone outside your tailnet."))
 
 story.append(PageBreak())
 
-# ============================================================================
-# 2. INSTALLAZIONE
-# ============================================================================
-story.append(H1("2. Installazione"))
+# 2. INSTALLATION
+story.append(H1("2. Installation"))
 
-story.append(H2("2.1 Prerequisiti"))
-story.append(P("Sul Raspberry Pi (lato server):"))
+story.append(H2("2.1 Prerequisites"))
+story.append(P("On the Raspberry Pi (server side):"))
 story.append(ListFlowable([
-    ListItem(P("Distribuzione AstroArch (Arch Linux for RaspberryPi)")),
-    ListItem(P("Python 3.11+ con pip")),
-    ListItem(P("Tailscale installato e attivo")),
-    ListItem(P("KStars/Ekos installati con un profilo INDI configurato")),
-    ListItem(P("PHD2 installato (opzionale, per guiding)")),
+    ListItem(P("AstroArch (Arch Linux for Raspberry Pi) distribution")),
+    ListItem(P("Python 3.11+ with pip")),
+    ListItem(P("Tailscale installed and active")),
+    ListItem(P("KStars/Ekos installed with a configured INDI profile")),
+    ListItem(P("PHD2 installed (optional, for guiding)")),
     ListItem(P("astrometry.net + index files in <font face='Courier'>"
-               "~/.local/share/kstars/astrometry/</font> (opzionale, per plate solving)")),
+               "~/.local/share/kstars/astrometry/</font> (optional, for plate solving)")),
 ], bulletType="bullet", leftIndent=20))
-story.append(P("Sul cellulare Android (lato client):"))
+story.append(P("On the Android phone (client side):"))
 story.append(ListFlowable([
-    ListItem(P("Android 8.0 (API 26) o superiore")),
-    ListItem(P("App Tailscale installata e collegata alla stessa tailnet del RaspberryPi")),
-    ListItem(P("~50 MB di spazio libero")),
+    ListItem(P("Android 8.0 (API 26) or later")),
+    ListItem(P("Tailscale app installed and connected to the same tailnet as the Raspberry Pi")),
+    ListItem(P("~50 MB of free space")),
 ], bulletType="bullet", leftIndent=20))
 
-story.append(H2("2.2 Installazione backend sul RaspberryPi"))
-story.append(H3("Step 1 - Trasferire il backend"))
-story.append(P("Dal computer dove hai il file <i>backend/</i> della distribuzione "
-               "Astroarch Interface:"))
+story.append(H2("2.2 Backend installation on the Raspberry Pi"))
+story.append(H3("Step 1 - Transfer the backend"))
+story.append(P("From the computer where you have the <i>backend/</i> folder of the "
+               "Astroarch Interface distribution:"))
 story.append(CODE("scp -r backend/ astronaut@100.74.22.40:/tmp/"))
-story.append(P("(Sostituisci <font face='Courier'>100.74.22.40</font> con l'IP "
-               "Tailscale del tuo RaspberryPi)"))
+story.append(P("(Replace <font face='Courier'>100.74.22.40</font> with the "
+               "Tailscale IP of your Raspberry Pi)"))
 
-story.append(H3("Step 2 - Installare il servizio"))
-story.append(P("SSH sul RaspberryPi ed esegui:"))
+story.append(H3("Step 2 - Install the service"))
+story.append(P("SSH into the Raspberry Pi and run:"))
 story.append(CODE("ssh astronaut@100.74.22.40\n"
                   "cd /tmp/backend\n"
                   "sudo bash deploy/install.sh --user astronaut"))
-story.append(P("Lo script:"))
+story.append(P("The installer:"))
 story.append(ListFlowable([
-    ListItem(P("Crea/usa l'utente specificato (default: <i>astroarch</i>; passare "
-               "<font face='Courier'>--user astronaut</font> per usare il proprio)")),
-    ListItem(P("Installa le dipendenze Python (FastAPI, uvicorn, astropy, pillow, "
-               "watchdog, pydantic, websockets, numpy)")),
-    ListItem(P("Installa il package <font face='Courier'>astroarch_bridge</font>")),
-    ListItem(P("Crea il servizio systemd <font face='Courier'>astroarch-bridge.service</font>")),
-    ListItem(P("Abilita l'avvio automatico al boot")),
-    ListItem(P("Avvia il daemon")),
+    ListItem(P("Creates/uses the specified user (default: <i>astroarch</i>; "
+               "pass <font face='Courier'>--user astronaut</font> to use your own)")),
+    ListItem(P("Installs the Python dependencies (FastAPI, uvicorn, astropy, "
+               "Pillow, watchdog, pydantic, websockets, numpy)")),
+    ListItem(P("Installs the <font face='Courier'>astroarch_bridge</font> package")),
+    ListItem(P("Creates the <font face='Courier'>astroarch-bridge.service</font> "
+               "systemd unit")),
+    ListItem(P("Enables auto-start on boot")),
+    ListItem(P("Starts the daemon")),
 ], bulletType="bullet", leftIndent=20))
-story.append(P("Al termine, lo script stampa l'URL e il <b>token Bearer</b> "
-               "auto-generato. Annotalo: ti servirà per connettere l'app."))
+story.append(P("At the end the script prints the URL and the auto-generated "
+               "<b>Bearer token</b>. Save it: you will need it to connect from the app."))
 story.append(CODE("==> astroarch-bridge installed and running\n"
                   "    URL:   http://100.74.22.40:8765\n"
-                  "    Token: kJ3xSn9mZ7TqW...   (es)"))
+                  "    Token: kJ3xSn9mZ7TqW...   (example)"))
 
-story.append(H3("Step 3 - Verificare il servizio"))
+story.append(H3("Step 3 - Verify the service"))
 story.append(CODE("systemctl --user status astroarch-bridge\n"
                   "journalctl --user -u astroarch-bridge -f\n"
                   "curl http://localhost:8765/healthz"))
-story.append(P("L'output di healthz deve mostrare:"))
+story.append(P("The healthz output should show:"))
 story.append(CODE('{"ok":true,"version":"0.1.0","indi":"...","phd2":"..."}'))
 
-story.append(H2("2.3 Installazione dashboard desktop"))
-story.append(P("Sul desktop di AstroArch viene installata una mini-dashboard Tk per "
-               "monitorare lo stato del bridge e generare il QR code per l'app:"))
+story.append(H2("2.3 Desktop dashboard installation"))
+story.append(P("A small Tk dashboard is installed on the AstroArch desktop to "
+               "monitor the bridge state and generate the QR code for the app:"))
 story.append(CODE("scp -r desktop_dashboard/ astronaut@100.74.22.40:/home/astronaut/astroarch-bridge-dashboard\n"
                   "scp desktop_dashboard/AstroarchBridge.desktop \\\n"
                   "    astronaut@100.74.22.40:/home/astronaut/Desktop/\n"
                   "ssh astronaut@100.74.22.40 'chmod +x ~/Desktop/AstroarchBridge.desktop'"))
-story.append(P("Sul desktop AstroArch vedrai l'icona <b>Astroarch Bridge</b> che apre "
-               "una finestra con stato servizio, info Ekos, URL/Token, QR code per "
-               "configurazione automatica dell'app, e bottoni Connetti/Disconnetti."))
+story.append(P("On the AstroArch desktop you will see the <b>Astroarch Bridge</b> "
+               "icon. It opens a window with service status, Ekos info, "
+               "URL/Token, a QR code for the app, and Connect/Disconnect buttons."))
 
-story.append(H2("2.4 Installazione APK su Android"))
-story.append(P("Sul cellulare:"))
+story.append(H2("2.4 APK installation on Android"))
+story.append(P("On the phone:"))
 story.append(ListFlowable([
-    ListItem(P("Trasferisci il file <font face='Courier'>"
-               "AstroarchInterface-v0.2.4.apk</font> al telefono "
+    ListItem(P("Transfer the <font face='Courier'>"
+               "AstroarchInterface-v0.2.12.apk</font> file to the phone "
                "(USB / Drive / Tailscale Drop)")),
-    ListItem(P("Apri il file dal file manager. Android chiederà di abilitare "
-               '"Installa app da fonti sconosciute" per il file manager: confermalo.')),
-    ListItem(P("Tap <b>Installa</b> → l'app appare nel launcher come "
+    ListItem(P("Open the file from the file manager. Android will ask you to "
+               'enable "Install apps from unknown sources" for the file '
+               "manager: confirm.")),
+    ListItem(P("Tap <b>Install</b> → the app shows up in the launcher as "
                '<b>"Astroarch Interface"</b>')),
 ], bulletType="bullet", leftIndent=20))
 
-story.append(H2("2.5 Primo accesso"))
-story.append(P("Apri l'app:"))
+story.append(H2("2.5 First connection"))
+story.append(P("Open the app:"))
 story.append(ListFlowable([
-    ListItem(P("Tappa <b>SCAN QR DALLA DASHBOARD</b> e inquadra il QR code "
-               "mostrato sulla dashboard desktop del RaspberryPi: "
-               "host, porta e token vengono compilati automaticamente.")),
-    ListItem(P("In alternativa, inserisci manualmente:")),
+    ListItem(P("Tap <b>SCAN QR FROM DASHBOARD</b> and frame the QR code shown "
+               "on the desktop dashboard of the Raspberry Pi: host, port and "
+               "token will be filled in automatically.")),
+    ListItem(P("Or fill them in manually:")),
 ], bulletType="bullet", leftIndent=20))
 story.append(kv_table([
-    ["HOST", "IP Tailscale del RaspberryPi (es. 100.74.22.40)"],
-    ["PORTA", "8765"],
-    ["TOKEN", "Quello mostrato dall'installer o letto via cat ~/.config/astroarch-bridge/token"],
+    ["HOST", "Tailscale IP of the Raspberry Pi (e.g. 100.74.22.40)"],
+    ["PORT", "8765"],
+    ["TOKEN", "The one printed by the installer or read with cat ~/.config/astroarch-bridge/token"],
 ]))
-story.append(P("Tap <b>CONNETTI</b>. Se la connessione è ok, l'app passa direttamente "
-               "alla Dashboard. Se fallisce, tap <b>TEST</b> per la diagnostica step-by-step."))
+story.append(P("Tap <b>CONNECT</b>. If the connection works you go straight to "
+               "the Dashboard. If it fails, tap <b>TEST</b> for step-by-step diagnostics."))
 
-story.append(WARN("Se la connessione fallisce con timeout, verifica che Tailscale sia "
-                  "attivo sul cellulare. Su alcuni dispositivi Android (Xiaomi/MIUI, "
-                  "OnePlus, Samsung) bisogna disabilitare il battery optimization "
-                  "per Tailscale, altrimenti la VPN viene uccisa in background."))
+story.append(WARN("If the connection fails with a timeout, make sure Tailscale "
+                  "is active on the phone. Some Android devices (Xiaomi/MIUI, "
+                  "OnePlus, Samsung) need battery optimization disabled for "
+                  "Tailscale, otherwise the VPN gets killed in the background."))
 
 story.append(PageBreak())
 
-# ============================================================================
-# 3. INTERFACCIA - SCHERMATE PRINCIPALI
-# ============================================================================
-story.append(H1("3. Schermate principali"))
-story.append(P("L'app ha una <b>bottom navigation</b> a 5 voci sempre visibili "
-               "(Dashboard, Mount, Capture, Guide, Menu) e un <b>drawer laterale</b> "
-               "con le schermate avanzate raggiungibile dal pulsante Menu."))
+# 3. MAIN SCREENS
+story.append(H1("3. Main screens"))
+story.append(P("The app uses a 5-tab <b>bottom navigation</b> always visible "
+               "(Dashboard, Mount, Align, Capture, Guide) and a <b>side drawer</b> "
+               "with the advanced screens, opened from the menu icon in the AppBar."))
 
 story.append(H2("3.1 Dashboard"))
-story.append(P("Schermata di partenza dopo il login. Mostra in tempo reale:"))
+story.append(P("The first screen after login. Shows in real time:"))
 story.append(ListFlowable([
-    ListItem(P("<b>Banner connessione</b> in cima con stato INDI / PHD2 / WS state / "
-               "WS frames a colpo d'occhio (verde=ok, giallo=connecting, rosso=fail)")),
-    ListItem(P("<b>Target attivo</b> con coordinate RA/Dec e stato mount")),
-    ListItem(P("<b>Preview ultima immagine catturata</b> auto-stretchata, tap per "
-               "Live View a schermo intero")),
-    ListItem(P("4 card stato: Mount (tracking), Camera (temperatura), Guide (RMS PHD2), "
-               "Focuser (posizione)")),
-    ListItem(P("Telemetria osservatorio: meteo, dome, weather safe")),
+    ListItem(P("<b>Connection banner</b> at the top with INDI / PHD2 / WS "
+               "state / WS frames (green=ok, yellow=connecting, red=fail)")),
+    ListItem(P("<b>Active target</b> with RA/Dec coordinates and mount status")),
+    ListItem(P("<b>Last captured image preview</b> auto-stretched, tap for "
+               "full-screen Live View")),
+    ListItem(P("4 status cards: Mount (tracking), Camera (temperature), Guide "
+               "(PHD2 RMS), Focuser (position)")),
+    ListItem(P("Observatory telemetry: weather, dome, weather safe")),
 ], bulletType="bullet", leftIndent=20))
 
 story.append(H2("3.2 Mount"))
-story.append(P("Controllo telescopio completo:"))
+story.append(P("Full telescope control:"))
 story.append(ListFlowable([
-    ListItem(P("<b>Coordinate live</b> RA/Dec aggiornate in tempo reale, pier side, "
-               "stato corrente del mount")),
-    ListItem(P("<b>Search SIMBAD</b>: digita un nome (M 31, NGC 7000, Vega) e tappa "
-               "CERCA. Ottieni RA/Dec via astropy. Bottoni: GOTO+TRACK / SLEW / SYNC")),
-    ListItem(P("<b>GoTo manuale</b> con campi RA (ore) e Dec (gradi)")),
-    ListItem(P("<b>Joypad slew</b> manuale N/S/E/W con selezione rate "
-               "(GUIDE / CENTERING / FIND / MAX a seconda del driver)")),
-    ListItem(P("<b>Park/Unpark/Sync/Stop</b> rapidi")),
-    ListItem(P("<b>Tracking mode</b> chip selezionabili: Sidereal / Lunar / Solar / Off")),
+    ListItem(P("<b>Live RA/Dec</b> updated in real time, pier side, current "
+               "mount status")),
+    ListItem(P("<b>SIMBAD search</b>: type a name (M 31, NGC 7000, Vega) and "
+               "tap SEARCH. RA/Dec resolved via astropy. Buttons: GOTO+TRACK "
+               "/ SLEW / SYNC")),
+    ListItem(P("<b>Manual GoTo</b> with RA (hours) and Dec (degrees) fields")),
+    ListItem(P("<b>N/S/E/W slew joypad</b> with rate selection "
+               "(GUIDE / CENTERING / FIND / MAX depending on the driver)")),
+    ListItem(P("Quick Park/Unpark/Sync/Stop")),
+    ListItem(P("<b>Tracking mode</b> chips: Sidereal / Lunar / Solar / Off")),
 ], bulletType="bullet", leftIndent=20))
 
-story.append(H2("3.3 Capture"))
-story.append(P("Sequencer multi-job stile Ekos:"))
+story.append(H2("3.3 Align (Plate Solve + Polar Align)"))
+story.append(P("<b>Plate Solve</b> tab — exact clone of Ekos Align:"))
 story.append(ListFlowable([
-    ListItem(P("<b>Pannello Cooler</b> con temperatura sensore live, target editabile, "
-               "barra Power %, toggle ON/OFF visivo (verde quando ON), bottone "
-               "RICONNETTI DRIVER per recuperare i casi di driver bloccato (es ToupTek)")),
-    ListItem(P("<b>Lista jobs</b> trascinabili per riordinare, con menu contestuale "
-               "(Modifica / Duplica / Rimuovi)")),
-    ListItem(P("Ogni job ha: filter, count, exposure, gain, offset, binning, "
-               "frame type (Light/Dark/Flat/Bias), transfer format (FITS/NATIVE/XISF), "
-               "capture format (RAW/RGB), delay, dither flag, target name")),
-    ListItem(P("<b>+ NUOVO JOB</b>: form completo con tutti i parametri")),
-    ListItem(P("<b>Preset</b>: salva/carica sequenze JSON (es. 'M31 LRGB notte 1')")),
-    ListItem(P("<b>AVVIA SEQUENZA</b>: dialog con 3 opzioni — vedi capitolo 4")),
+    ListItem(P("Live FITS preview (pinch zoom) <b>stretched identically to Ekos</b>")),
+    ListItem(P("Configurable Exposure / Gain / Binning, applied to the camera "
+               "before the solve")),
+    ListItem(P("Solver action chips: GoTo / Sync / Slew to target / Nothing")),
+    ListItem(P("Solver mode chips: StellarSolver / Remote (INDI)")),
+    ListItem(P("Live telescope coordinates and solution: RA, DEC, Err, PA, "
+               "Pixel scale, FOV, Focal length, F-ratio")),
+    ListItem(P("Solve history with color-coded dRA/dDEC (green<50\", yellow<150\", red beyond)")),
+    ListItem(P("Ekos-style target plot with concentric 50/100/150\" rings")),
+    ListItem(P("Expandable Ekos Align log")),
 ], bulletType="bullet", leftIndent=20))
 
-story.append(H2("3.4 Guide"))
-story.append(P("Controllo PHD2 completo:"))
+story.append(P("<b>Polar Align</b> tab — drift-based 3-step routine:"))
 story.append(ListFlowable([
-    ListItem(P("Card: RMS Total, SNR, RMS RA, RMS Dec")),
-    ListItem(P("Grafico errore inseguimento RA/Dec live (storico ultime ~120 letture)")),
-    ListItem(P("Bottoni: START / STOP / DITHER / FIND STAR / CALIBRATE / CLEAR CAL / PAUSE")),
-    ListItem(P("Equipaggiamento PHD2: versione, scale ″/px, calibrato, settling")),
+    ListItem(P("Capture + plate solve at 3 different RA positions")),
+    ListItem(P("AZ/ALT error computation from Dec drift")),
+    ListItem(P("Suggested screw adjustments")),
+], bulletType="bullet", leftIndent=20))
+
+story.append(H2("3.4 Capture"))
+story.append(P("Multi-job sequencer in Ekos style:"))
+story.append(ListFlowable([
+    ListItem(P("<b>Cooler panel</b> with live sensor temperature, editable "
+               "target, power % bar, visual ON/OFF toggle (green when ON), "
+               "and a RECONNECT DRIVER button for stuck driver recovery (e.g. ToupTek)")),
+    ListItem(P("<b>Job list</b> drag-and-drop reorderable, with context menu "
+               "(Edit / Duplicate / Remove)")),
+    ListItem(P("Each job has: filter, count, exposure, gain, offset, binning, "
+               "frame type (Light/Dark/Flat/Bias), transfer format "
+               "(FITS/NATIVE/XISF), capture format (RAW/RGB), delay, dither "
+               "flag, target name")),
+    ListItem(P("<b>+ NEW JOB</b>: full form with all parameters")),
+    ListItem(P("<b>Presets</b>: save/load JSON sequences (e.g. 'M31 LRGB night 1')")),
+    ListItem(P("<b>START SEQUENCE</b>: dialog with 3 options - see chapter 4")),
+], bulletType="bullet", leftIndent=20))
+
+story.append(H2("3.5 Guide"))
+story.append(P("Full PHD2 control:"))
+story.append(ListFlowable([
+    ListItem(P("Cards: RMS Total, SNR, RMS RA, RMS Dec")),
+    ListItem(P("Live RA/Dec tracking error chart (history of the last ~120 samples)")),
+    ListItem(P("Buttons: START / STOP / DITHER / FIND STAR / CALIBRATE / CLEAR CAL / PAUSE")),
+    ListItem(P("PHD2 equipment: version, pixel scale, calibrated, settling")),
 ], bulletType="bullet", leftIndent=20))
 
 story.append(PageBreak())
 
-# ============================================================================
-# 4. PIPELINE OSSERVAZIONE COMPLETA
-# ============================================================================
-story.append(H1("4. Pipeline pre-flight"))
-story.append(P("Quando tappi <b>AVVIA SEQUENZA</b> nella Capture compare un dialog "
-               "con <b>tre modalità</b> di esecuzione:"))
+# 4. PRE-FLIGHT PIPELINE
+story.append(H1("4. Pre-flight pipeline"))
+story.append(P("When you tap <b>START SEQUENCE</b> in Capture a dialog appears "
+               "with <b>three execution modes</b>:"))
 
-story.append(H2("4.1 OSSERVAZIONE COMPLETA (consigliata)"))
-story.append(P("Esegue una pipeline orchestrata di 10 fasi che replica esattamente "
-               "il comportamento di Ekos Scheduler:"))
+story.append(H2("4.1 FULL OBSERVATION (recommended)"))
+story.append(P("Runs an orchestrated 10-stage pipeline that reproduces what "
+               "Ekos Scheduler does:"))
 story.append(grid_table(
-    ["#", "Fase", "Descrizione", "Skip"],
+    ["#", "Stage", "Description", "Skip"],
     [
-        ["1", "resolve_target", "Risolve nome via SIMBAD/astropy → RA/Dec", "—"],
-        ["2", "slew", "Mount goto+track verso il target", "—"],
-        ["3", "tracking", "Aspetta state Ok del mount (max 5 min)", "—"],
-        ["4", "plate_solve", "solve-field sull'ultimo frame con hint ±5°", "opt"],
-        ["5", "sync_mount", "Sincronizza mount sul solve, riattiva tracking", "auto"],
-        ["6", "autofocus", "Loop iterativo HFR con V-curve", "opt"],
-        ["7", "guide_calibrate", "PHD2 clear+recalibrate, attesa Guiding (4 min)", "opt"],
-        ["8", "guide_start", "PHD2 start guiding, attesa settle (3 min)", "opt"],
-        ["9", "capture_load", "Carica .esq in Ekos via DBus", "—"],
-        ["10", "capture_started", "Avvia coda Ekos Capture", "—"],
+        ["1", "resolve_target", "Resolves the name via SIMBAD/astropy → RA/Dec", "-"],
+        ["2", "slew", "Mount goto+track to the target", "-"],
+        ["3", "tracking", "Waits for the mount to be Ok (max 5 min)", "-"],
+        ["4", "plate_solve", "solve-field on the last frame with ±5° hint", "opt"],
+        ["5", "sync_mount", "Syncs the mount on the solve, re-enables tracking", "auto"],
+        ["6", "autofocus", "Iterative HFR loop with V-curve", "opt"],
+        ["7", "guide_calibrate", "PHD2 clear+recalibrate, wait for Guiding (4 min)", "opt"],
+        ["8", "guide_start", "PHD2 start guiding, wait for settle (3 min)", "opt"],
+        ["9", "capture_load", "Loads the .esq into Ekos via DBus", "-"],
+        ["10", "capture_started", "Starts the Ekos queue", "-"],
     ],
     col_widths=[1 * cm, 3 * cm, 9 * cm, 1.5 * cm]))
-story.append(P("Solo dopo che ogni fase passa con successo, parte la cattura. "
-               "L'app mostra una <b>timeline live</b> con stato colorato per ogni fase "
-               "(grigio=pending, ambra=running, verde=done, rosso=failed)."))
+story.append(P("Capture only starts after every stage has succeeded. The app "
+               "shows a <b>live timeline</b> with colored stage states "
+               "(grey=pending, amber=running, green=done, red=failed)."))
 
-story.append(NOTE("Le fasi opzionali si abilitano nella schermata Observation. "
-                  "Per la prima sera consiglio di attivare tutto. Nei cicli successivi "
-                  "puoi disabilitare plate solve e calibrate (sono i più lenti) per uno "
-                  "start più rapido."))
+story.append(NOTE("Optional stages can be enabled in the Observation screen. "
+                  "For the first night I suggest enabling everything. On "
+                  "later cycles you can disable plate solve and calibrate "
+                  "(the slowest ones) for a faster start."))
 
 story.append(H2("4.2 VIA EKOS (loadSequenceQueue)"))
-story.append(P("Genera un file <font face='Courier'>.esq</font> dai jobs Flutter e lo "
-               "carica nella Ekos Capture queue via DBus, poi avvia. La sequenza "
-               "appare <b>dentro</b> la finestra Capture di Ekos sul desktop. "
-               "Ekos gestisce dither, autofocus on filter change, naming FITS, "
-               "meridian flip — tutto il suo workflow standard."))
+story.append(P("Generates an <font face='Courier'>.esq</font> file from the "
+               "Flutter jobs and loads it into the Ekos Capture queue via "
+               "DBus, then starts. The sequence appears <b>inside</b> the "
+               "Ekos Capture window on the desktop. Ekos handles dither, "
+               "autofocus on filter change, FITS naming, meridian flip - "
+               "all of its native workflow."))
 
-story.append(H2("4.3 DIRETTO (via INDI)"))
-story.append(P("L'app comanda direttamente i driver INDI senza passare da Ekos. "
-               "Più veloce ma Ekos non vede la sequenza nella sua UI."))
+story.append(H2("4.3 DIRECT (via INDI)"))
+story.append(P("The app drives the INDI drivers directly without going "
+               "through Ekos. Faster but Ekos won't see the sequence in its UI."))
 
-story.append(WARN("In modalità DIRETTO l'app forza automaticamente "
-                  "<font face='Courier'>UPLOAD_MODE=BOTH</font> e "
-                  "<font face='Courier'>UPLOAD_DIR=~/Pictures/Ekos/AstroarchInterface/</font> "
-                  "così i FITS arrivano sia a Ekos sia al watcher dell'app."))
+story.append(WARN("In DIRECT mode the app does NOT modify Ekos's setup. The "
+                  "bridge intercepts BLOBs as a parallel INDI client via "
+                  "enableBLOB Also, so files are not saved to disk by the "
+                  "bridge - everything stays in RAM."))
 
 story.append(PageBreak())
 
-# ============================================================================
-# 5. SCHERMATE AVANZATE
-# ============================================================================
-story.append(H1("5. Schermate avanzate"))
-story.append(P("Tutte raggiungibili dal drawer laterale (tap Menu nella bottom nav)."))
+# 5. ADVANCED SCREENS
+story.append(H1("5. Advanced screens"))
+story.append(P("All available from the side drawer (tap the menu icon)."))
 
 story.append(H2("5.1 Live View"))
-story.append(P("Visualizzatore a schermo intero dell'ultimo frame catturato, con "
-               "zoom pinch e metadata (HFR, stelle, esposizione, filter)."))
+story.append(P("Full-screen viewer for the last captured frame, with pinch "
+               "zoom and metadata (HFR, stars, exposure, filter)."))
 
 story.append(H2("5.2 Focus"))
-story.append(P("Controllo focheggiatore con autofocus iterativo:"))
+story.append(P("Focuser control with iterative autofocus:"))
 story.append(ListFlowable([
-    ListItem(P("Movimento manuale ±10/100/1000 step in/out")),
-    ListItem(P("Posizione assoluta con campo numerico")),
-    ListItem(P("<b>Autofocus iterativo</b>: imposta step size, n step (dispari), "
-               "esposizione → AVVIA. Il bridge fa N scatti a posizioni diverse, "
-               "calcola HFR per ciascuna, trova il minimo, sposta sul best position.")),
-    ListItem(P("<b>Plot V-curve live</b> con punti colorati e linea verticale "
-               "tratteggiata sul best position trovato")),
+    ListItem(P("Manual movement ±10/100/1000 steps in/out")),
+    ListItem(P("Absolute position with numeric field")),
+    ListItem(P("<b>Iterative autofocus</b>: set step size, n steps (odd), "
+               "exposure → START. The bridge takes N shots at "
+               "different positions, computes HFR for each, finds the "
+               "minimum, moves to the best position.")),
+    ListItem(P("<b>Live V-curve plot</b> with colored points and a dashed "
+               "vertical line on the best position")),
 ], bulletType="bullet", leftIndent=20))
 
 story.append(H2("5.3 Align (Plate Solve)"))
 story.append(P("Plate solving via solve-field astrometry.net:"))
 story.append(ListFlowable([
-    ListItem(P("Mostra l'ultimo frame catturato e i suoi metadata")),
-    ListItem(P("Tap <b>PLATE SOLVE</b> → backend lancia "
-               "<font face='Courier'>solve-field</font> con hint dal mount corrente "
-               "(raggio 5°), poll status ogni 2s")),
-    ListItem(P("Quando finisce, mostra RA/Dec/scale ″/px estratti via "
-               "<font face='Courier'>astropy.wcs.WCS</font> dal file .wcs")),
-    ListItem(P("Bottone <b>SYNC MOUNT</b>: sincronizza la mount sul risultato del solve")),
-    ListItem(P("Output completo di solve-field espandibile per debug")),
+    ListItem(P("Shows the last captured frame and its metadata")),
+    ListItem(P("Tap <b>PLATE SOLVE</b> → the backend launches "
+               "<font face='Courier'>solve-field</font> with hints from the "
+               "current mount (5° radius), polls status every 2s")),
+    ListItem(P("When done, shows RA/Dec/scale extracted via "
+               "<font face='Courier'>astropy.wcs.WCS</font> from the .wcs file")),
+    ListItem(P("<b>SYNC MOUNT</b> button: syncs the mount on the solve result")),
+    ListItem(P("Full solve-field output expandable for debug")),
 ], bulletType="bullet", leftIndent=20))
 
 story.append(H2("5.4 Observatory"))
-story.append(P("Controllo dome, dust cap, flat panel, weather:"))
+story.append(P("Dome, dust cap, flat panel, weather control:"))
 story.append(ListFlowable([
-    ListItem(P("Card weather con tutti i parametri (temp, umidità, vento, cielo)")),
+    ListItem(P("Weather card with all parameters (temp, humidity, wind, sky)")),
     ListItem(P("Dome shutter Open/Close")),
     ListItem(P("Dust cap Park/Unpark")),
-    ListItem(P("Flat panel toggle + slider intensità 0-255")),
+    ListItem(P("Flat panel toggle + 0-255 intensity slider")),
 ], bulletType="bullet", leftIndent=20))
 
 story.append(H2("5.5 Scheduler"))
-story.append(P("Pianificatore notturno multi-target:"))
+story.append(P("Multi-target nightly planner:"))
 story.append(ListFlowable([
-    ListItem(P("Card sky-state: fase twilight (day/civil/nautical/astronomical/night), "
-               "altitudine sole/luna, lat/lon (auto-rilevate dal mount)")),
-    ListItem(P("Lista jobs persistenti con RA/Dec, altitudine minima, time window")),
-    ListItem(P("+NUOVO JOB: form con risoluzione SIMBAD automatica del target")),
-    ListItem(P("Per ogni job: tap ✓ per verificare condizioni live (twilight required, "
-               "altitudine attuale, weather safe) → dialog con elenco issue")),
+    ListItem(P("Sky-state card: twilight phase (day/civil/nautical/"
+               "astronomical/night), sun/moon altitude, lat/lon "
+               "(auto-detected from the mount)")),
+    ListItem(P("Persistent jobs list with RA/Dec, minimum altitude, time window")),
+    ListItem(P("+NEW JOB: form with automatic SIMBAD target resolution")),
+    ListItem(P("For each job: tap ✓ to live-check conditions (twilight "
+               "required, current altitude, weather safe) → dialog with "
+               "the list of issues")),
 ], bulletType="bullet", leftIndent=20))
 
-story.append(H2("5.6 Setup / Profili"))
-story.append(P("Lista driver INDI attualmente caricati con toggle "
-               "<b>CONNECT/DISCONNECT</b> (utile per attivare driver come XAGYL Wheel "
-               "o Weather Watcher quando Ekos li carica ma non li connette)."))
+story.append(H2("5.6 Setup / Profiles"))
+story.append(P("Active INDI driver list with <b>CONNECT/DISCONNECT</b> "
+               "toggle (useful to enable drivers like XAGYL Wheel or Weather "
+               "Watcher when Ekos loaded but did not connect them)."))
 
 story.append(H2("5.7 INDI Panel"))
-story.append(P("Clone esatto della INDI Control Panel di KStars/Ekos:"))
+story.append(P("Exact clone of the KStars/Ekos INDI Control Panel:"))
 story.append(ListFlowable([
-    ListItem(P("Lista di tutti i device connessi")),
-    ListItem(P("Tap su un device → tutte le sue properties raggruppate per Group "
-               "(Main Control, Options, ecc.)")),
-    ListItem(P("Switch interattivi (ChipToggle), Number editabili, Text editabili, "
-               "Light read-only con stato colorato")),
-    ListItem(P("Cambiamenti propagati live in entrambe le direzioni: modifichi "
-               "qui → Ekos lo vede, modifichi in Ekos → qui appare")),
-    ListItem(P("Bottone CONNECT/DISCONNECT in alto per ogni device")),
+    ListItem(P("List of every connected device")),
+    ListItem(P("Tap a device → all its properties grouped by Group "
+               "(Main Control, Options, etc.)")),
+    ListItem(P("Interactive Switches (ChipToggle), editable Numbers, editable "
+               "Texts, read-only Lights with colored state")),
+    ListItem(P("Live two-way propagation: change here → Ekos sees it; "
+               "change in Ekos → it appears here")),
+    ListItem(P("CONNECT/DISCONNECT button at the top for each device")),
 ], bulletType="bullet", leftIndent=20))
 
 story.append(H2("5.8 Files"))
-story.append(P("Browser dei FITS in <font face='Courier'>~/Pictures/Ekos/</font>:"))
+story.append(P("Browser for FITS files in <font face='Courier'>"
+               "~/Pictures/Ekos/</font>:"))
 story.append(ListFlowable([
-    ListItem(P("Lista file recenti con thumbnail auto-stretchata")),
-    ListItem(P("Tap → preview a schermo intero con zoom")),
-    ListItem(P("Filtri Light/Dark/Flat/Bias/All")),
+    ListItem(P("Recent files list with auto-stretched thumbnails")),
+    ListItem(P("Tap → full-screen preview with zoom")),
+    ListItem(P("Light/Dark/Flat/Bias/All filters")),
+    ListItem(P("Multi-select with long-press and batch delete")),
 ], bulletType="bullet", leftIndent=20))
 
 story.append(H2("5.9 Logs / Activity Log"))
-story.append(P("Due schermate distinte:"))
+story.append(P("Two distinct screens:"))
 story.append(ListFlowable([
-    ListItem(P("<b>INDI Logs</b>: stream messaggi INDI/Ekos in tempo reale "
-               "con filtri per modulo")),
-    ListItem(P("<b>Activity Log</b>: tutte le richieste HTTP fatte dall'app al bridge, "
-               "con timestamp ms, status code colorato, durata, body. Tap per "
-               "dettaglio + copia. Indispensabile per debug.")),
+    ListItem(P("<b>INDI Logs</b>: live INDI/Ekos message stream, filterable "
+               "by module")),
+    ListItem(P("<b>Activity Log</b>: every HTTP request the app makes to the "
+               "bridge, with millisecond timestamp, color-coded status code, "
+               "duration, body. Tap for details + copy. Crucial for debugging.")),
 ], bulletType="bullet", leftIndent=20))
 
 story.append(H2("5.10 Analyze"))
-story.append(P("Timeline sessione corrente:"))
+story.append(P("Current session timeline:"))
 story.append(ListFlowable([
-    ListItem(P("Counters: WS events, properties totali, devices")),
+    ListItem(P("Counters: WS events, total properties, devices")),
     ListItem(P("Last frame info (object, filter, exposure, HFR, stars, size)")),
-    ListItem(P("Grafico storico RMS PHD2 (RA in ambra, Dec in azzurro)")),
-    ListItem(P("Stream messaggi INDI ultime 20 righe")),
+    ListItem(P("Historical PHD2 RMS chart (RA in amber, Dec in cyan)")),
+    ListItem(P("INDI message stream, last 20 lines")),
 ], bulletType="bullet", leftIndent=20))
 
 story.append(PageBreak())
 
-# ============================================================================
 # 6. TROUBLESHOOTING
-# ============================================================================
 story.append(H1("6. Troubleshooting"))
 story.append(grid_table(
-    ["Sintomo", "Causa probabile", "Fix"],
+    ["Symptom", "Likely cause", "Fix"],
     [
-        ["App: 'unreachable' al login",
-         "Tailscale non attivo sul cellulare oppure RPi offline",
-         "Verifica app Tailscale Connected; ping 100.74.22.40 dal browser cellulare"],
+        ["App: 'unreachable' on login",
+         "Tailscale not active on the phone or the RPi is offline",
+         "Check the Tailscale app shows Connected; ping 100.74.22.40 from the phone browser"],
         ["App: 'auth_failed'",
-         "Token sbagliato",
-         "cat ~/.config/astroarch-bridge/token sul RPi"],
-        ["App vede 0 device",
-         "Profilo Ekos non avviato",
-         "Apri Ekos sul desktop e avvia il profilo INDI"],
-        ["Cooler non funziona (POWER 0%)",
-         "Driver toupbase bloccato dopo on/off rapidi",
-         "Tap RICONNETTI DRIVER nella Capture"],
-        ["Sequenza non parte in Ekos",
-         "UPLOAD_MODE in CLIENT (default driver)",
-         "Forzato auto a BOTH dall'app v0.2.2+"],
-        ["Plate solve fail",
-         "Index files astrometry mancanti o scope sbagliato",
-         "Verifica ~/.local/share/kstars/astrometry/, hint scale"],
-        ["WS frames non si aggiorna",
-         "WS state disconnesso (banner rosso)",
-         "Refresh manuale (icona in Dashboard) o ri-connetti"],
-        ["FITS non vengono salvati",
-         "UPLOAD_DIR scritto male o dir non esiste",
-         "L'app crea la dir auto a /Pictures/Ekos/AstroarchInterface/"],
-        ["Multi-camera errore 409",
-         "Bridge non sa quale camera usare",
-         "Usa il dropdown Camera nella Capture (auto = primary)"],
+         "Wrong token",
+         "cat ~/.config/astroarch-bridge/token on the RPi"],
+        ["App sees 0 devices",
+         "Ekos profile not started",
+         "Open Ekos on the desktop and start the INDI profile"],
+        ["Cooler not working (POWER 0%)",
+         "toupbase driver stuck after fast on/off",
+         "Tap RECONNECT DRIVER on Capture"],
+        ["Sequence does not start in Ekos",
+         "UPLOAD_MODE in CLIENT (driver default)",
+         "Auto-forced to BOTH from app v0.2.2+"],
+        ["Plate solve fails",
+         "Astrometry index files missing or wrong scope",
+         "Check ~/.local/share/kstars/astrometry/, scale hint"],
+        ["WS frames does not refresh",
+         "WS state disconnected (red banner)",
+         "Manual refresh (Dashboard icon) or reconnect"],
+        ["FITS files not saved",
+         "UPLOAD_DIR misspelt or directory missing",
+         "App auto-creates /Pictures/Ekos/AstroarchInterface/"],
+        ["Multi-camera 409 error",
+         "Bridge does not know which camera to use",
+         "Use the Camera dropdown in Capture (default = primary)"],
     ],
     col_widths=[5 * cm, 4.5 * cm, 6 * cm]))
 
-story.append(H2("6.1 Comandi diagnostici sul RaspberryPi"))
-story.append(CODE("# Stato servizio bridge\n"
+story.append(H2("6.1 Diagnostic commands on the Raspberry Pi"))
+story.append(CODE("# Bridge service status\n"
                   "systemctl --user status astroarch-bridge\n\n"
-                  "# Log live\n"
+                  "# Live log\n"
                   "journalctl --user -u astroarch-bridge -f\n\n"
-                  "# Test endpoint\n"
+                  "# Endpoint test\n"
                   "curl http://localhost:8765/healthz\n\n"
-                  "# Sblocca driver INDI bloccato\n"
-                  "indi_setprop 'NOMECAMERA.CONNECTION.DISCONNECT=On'\n"
+                  "# Unstuck a frozen INDI driver\n"
+                  "indi_setprop 'CAMERA_NAME.CONNECTION.DISCONNECT=On'\n"
                   "sleep 2\n"
-                  "indi_setprop 'NOMECAMERA.CONNECTION.CONNECT=On'\n\n"
-                  "# Verifica stato cooler\n"
-                  "indi_getprop 'NOMECAMERA.CCD_TEMPERATURE.CCD_TEMPERATURE_VALUE'\n"
-                  "indi_getprop 'NOMECAMERA.CCD_COOLER_POWER.COOLER_POWER'"))
+                  "indi_setprop 'CAMERA_NAME.CONNECTION.CONNECT=On'\n\n"
+                  "# Inspect cooler state\n"
+                  "indi_getprop 'CAMERA_NAME.CCD_TEMPERATURE.CCD_TEMPERATURE_VALUE'\n"
+                  "indi_getprop 'CAMERA_NAME.CCD_COOLER_POWER.COOLER_POWER'"))
 
-story.append(H2("6.2 Diagnostica nell'app"))
-story.append(P("Sulla schermata Login c'è il bottone <b>TEST</b> che apre la "
-               "schermata Diagnostica con 7 step in sequenza:"))
+story.append(H2("6.2 Diagnostics inside the app"))
+story.append(P("On the Login screen there is a <b>TEST</b> button that opens "
+               "the Diagnostics screen with 7 sequential steps:"))
 story.append(ListFlowable([
-    ListItem(P("Risoluzione host (DNS / Tailscale)")),
+    ListItem(P("Host resolution (DNS / Tailscale)")),
     ListItem(P("HTTP GET /healthz")),
     ListItem(P("HTTP GET /api/system/info (auth Bearer)")),
-    ListItem(P("HTTP GET /api/system/snapshot (verifica payload)")),
-    ListItem(P("WebSocket /ws/state (apertura)")),
-    ListItem(P("WebSocket - primo messaggio entro 5s")),
-    ListItem(P("WebSocket - ricezione property_def chunked")),
+    ListItem(P("HTTP GET /api/system/snapshot (payload check)")),
+    ListItem(P("WebSocket /ws/state (open)")),
+    ListItem(P("WebSocket - first message within 5s")),
+    ListItem(P("WebSocket - chunked property_def reception")),
 ], bulletType="bullet", leftIndent=20))
-story.append(P("Ogni step mostra durata in ms e dettaglio errore in caso di fail. "
-               "Risolve il 95% dei problemi al primo colpo."))
+story.append(P("Each step shows the duration in milliseconds and the error "
+               "details on failure. It solves 95% of issues at first try."))
 
 story.append(PageBreak())
 
-# ============================================================================
-# 7. APPENDICE - API REST
-# ============================================================================
-story.append(H1("7. Appendice - API REST"))
-story.append(P("Tutte le richieste richiedono header "
+# 7. APPENDIX - REST API
+story.append(H1("7. Appendix - REST API"))
+story.append(P("All requests need the header "
                "<font face='Courier'>Authorization: Bearer &lt;token&gt;</font> "
-               "(eccetto /healthz). Risposte sempre JSON."))
+               "(except /healthz). Responses are always JSON."))
 
 story.append(H2("7.1 System"))
 story.append(grid_table(
-    ["Endpoint", "Metodo", "Descrizione"],
+    ["Endpoint", "Method", "Description"],
     [
         ["/healthz", "GET", "Health (no auth)"],
-        ["/api/system/info", "GET", "Info bridge (versione, autore)"],
-        ["/api/system/snapshot", "GET", "Stato globale (devices, properties, phd2, last_frame)"],
-        ["/api/system/connections", "GET", "Stato connessioni INDI/PHD2"],
-        ["/api/system/devices", "GET", "Lista device INDI"],
-        ["/api/system/camera_roles", "GET", "Identifica camera primary vs guide via PHD2"],
-        ["/api/system/simbad", "GET", "?name=M31 → RA/Dec via SIMBAD"],
+        ["/api/system/info", "GET", "Bridge info (version, author)"],
+        ["/api/system/snapshot", "GET", "Global state (devices, properties, phd2, last_frame)"],
+        ["/api/system/connections", "GET", "INDI/PHD2 connection state"],
+        ["/api/system/devices", "GET", "INDI device list"],
+        ["/api/system/camera_roles", "GET", "Identifies primary vs guide camera via PHD2"],
+        ["/api/system/simbad", "GET", "?name=M31 -> RA/Dec via SIMBAD"],
     ],
     col_widths=[6.5 * cm, 1.5 * cm, 7.5 * cm]))
 
 story.append(H2("7.2 Mount, Camera, Focuser, Filter, Guide"))
 story.append(grid_table(
-    ["Endpoint", "Metodo", "Descrizione"],
+    ["Endpoint", "Method", "Description"],
     [
-        ["/api/mount/status, /goto, /park, /track, /slew, /slew_rate, /abort", "GET/POST", "Controllo telescopio"],
-        ["/api/camera/status, /expose, /abort, /cooler, /gain, /offset, /binning, /frame_type, /transfer_format, /capture_format, /upload_setup", "GET/POST", "Controllo camera"],
-        ["/api/focuser/status, /abs, /rel, /abort, /autofocus, /autofocus/{id}", "GET/POST", "Focheggiatore + autofocus iterativo"],
-        ["/api/filter_wheel/status, /select", "GET/POST", "Ruota filtri"],
-        ["/api/guide/status, /start, /stop, /dither, /loop, /clear_calibration, /pause, /find_star, /calibrate, /profile", "GET/POST", "Guida PHD2"],
+        ["/api/mount/status, /goto, /park, /track, /slew, /slew_rate, /abort", "GET/POST", "Telescope control"],
+        ["/api/camera/status, /expose, /abort, /cooler, /gain, /offset, /binning, /frame_type, /transfer_format, /capture_format, /upload_setup", "GET/POST", "Camera control"],
+        ["/api/focuser/status, /abs, /rel, /abort, /autofocus, /autofocus/{id}", "GET/POST", "Focuser + iterative autofocus"],
+        ["/api/filter_wheel/status, /select", "GET/POST", "Filter wheel"],
+        ["/api/guide/status, /start, /stop, /dither, /loop, /clear_calibration, /pause, /find_star, /calibrate, /profile", "GET/POST", "PHD2 guide"],
     ],
     col_widths=[8 * cm, 1.5 * cm, 6 * cm]))
 
 story.append(H2("7.3 Align, Capture/Ekos, Observation, Scheduler, Setup"))
 story.append(grid_table(
-    ["Endpoint", "Descrizione"],
+    ["Endpoint", "Description"],
     [
-        ["/api/align/status, /solve, /solve/{id}/sync_mount", "Plate solving completo"],
+        ["/api/align/status, /solve, /solve/{id}/sync_mount, /capture_and_solve, /ekos_capture_and_solve, /ekos_full_status", "Plate solving + Ekos Align clone"],
         ["/api/capture/ekos_alive, /ekos_run, /ekos_status, /ekos_abort, /ekos_clear", "Capture via Ekos DBus"],
-        ["/api/observation/run, /{id}, /{id}/abort", "Pipeline pre-flight 10 fasi"],
-        ["/api/scheduler/sky_state, /jobs, /jobs/{id}/check_conditions, /weather_safe", "Scheduler temporale"],
-        ["/api/setup/profiles, /active_drivers", "Profili Ekos + driver attivi"],
+        ["/api/observation/run, /{id}, /{id}/abort", "Pre-flight pipeline 10 stages"],
+        ["/api/scheduler/sky_state, /jobs, /jobs/{id}/check_conditions, /weather_safe", "Time scheduler"],
+        ["/api/setup/profiles, /active_drivers", "Ekos profiles + active drivers"],
         ["/api/observatory/status, /dome/shutter, /dust_cap, /flat_panel", "Dome + flat panel"],
-        ["/api/files/recent, /preview, /download", "Browser FITS"],
+        ["/api/files/recent, /preview, /download, /file (DELETE), /delete_many, /disk_usage", "FITS browser"],
     ],
     col_widths=[9.5 * cm, 6 * cm]))
 
-story.append(H2("7.4 INDI panel (clone control panel)"))
+story.append(H2("7.4 INDI panel (control panel clone)"))
 story.append(grid_table(
-    ["Endpoint", "Descrizione"],
+    ["Endpoint", "Description"],
     [
-        ["GET /api/indi/devices", "Lista device"],
-        ["GET /api/indi/devices/{dev}/properties", "Tutte le property del device"],
-        ["GET /api/indi/devices/{dev}/properties/{name}", "Singola property"],
-        ["POST /api/indi/devices/{dev}/properties/{name}", "Set valori (Switch/Number/Text)"],
+        ["GET /api/indi/devices", "Device list"],
+        ["GET /api/indi/devices/{dev}/properties", "All device properties"],
+        ["GET /api/indi/devices/{dev}/properties/{name}", "Single property"],
+        ["POST /api/indi/devices/{dev}/properties/{name}", "Set values (Switch/Number/Text)"],
         ["POST /api/indi/devices/{dev}/connect, /disconnect", "Connect/disconnect driver"],
         ["POST /api/indi/refresh", "Force getProperties"],
     ],
@@ -709,60 +715,57 @@ story.append(grid_table(
 
 story.append(H2("7.5 WebSocket"))
 story.append(grid_table(
-    ["URL", "Cosa pusha"],
+    ["URL", "What it pushes"],
     [
         ["GET /ws/state?token=...",
-         "snapshot_begin → N property_def → snapshot_end (init), poi property_def, "
-         "property_set, property_del, indi_message, phd2_event, phd2_live, frame_meta, connection"],
+         "snapshot_begin -> N property_def -> snapshot_end (init), then "
+         "property_def, property_set, property_del, indi_message, "
+         "phd2_event, phd2_live, frame_meta, connection"],
         ["GET /ws/frames?token=...",
-         "Per ogni frame: header JSON {type:frame_meta, size, hfr, ...} seguito dai bytes JPEG"],
+         "For each frame: JSON header {type:frame_meta, size, hfr, ...} "
+         "followed by JPEG bytes"],
     ],
     col_widths=[5.5 * cm, 10 * cm]))
 
 story.append(PageBreak())
 
-# ============================================================================
-# 8. CHANGELOG / VERSIONI
-# ============================================================================
+# 8. CHANGELOG
 story.append(H1("8. Changelog"))
 story.append(grid_table(
-    ["Versione", "Data", "Cambiamenti principali"],
+    ["Version", "Highlights"],
     [
-        ["0.1.0", "2026-05-03", "Prima release: 13 schermate base, WebSocket clone live, Tailscale auth"],
-        ["0.1.2-3", "2026-05-04", "Fix drawer + banner stato connessione + scanner QR"],
-        ["0.1.4", "2026-05-04", "WebSocket chunked snapshot (fix 200KB payload Android)"],
-        ["0.1.5-6", "2026-05-04", "Fix cleartext HTTP/WS + diagnostica step-by-step"],
-        ["0.1.7", "2026-05-04", "Camera primary/guide auto-detection via PHD2"],
-        ["0.1.8-10", "2026-05-04", "Cooler toggle robusto + sequenza scatti + Activity Log"],
-        ["0.1.11", "2026-05-04", "Planner Capture con preview + AVVIA esplicito"],
-        ["0.2.0", "2026-05-04", "Clone Ekos completo: 8 moduli (A-H) + multi-job + SIMBAD + autofocus V-curve"],
-        ["0.2.1", "2026-05-04", "Plate solving via solve-field + Scheduler temporale + sky_state"],
-        ["0.2.2", "2026-05-04", "UPLOAD_MODE auto BOTH + format selector (FITS/NATIVE/XISF, RAW/RGB)"],
-        ["0.2.3", "2026-05-04", "Capture via Ekos DBus (loadSequenceQueue + start)"],
-        ["0.2.4", "2026-05-04", "Pipeline OSSERVAZIONE COMPLETA con 10 fasi pre-flight"],
+        ["0.1.0", "First release: 13 base screens, live WebSocket clone, Tailscale auth"],
+        ["0.1.4", "Chunked WebSocket snapshot (fix 200KB Android payload)"],
+        ["0.1.5-6", "HTTP/WS cleartext fix + step-by-step diagnostics"],
+        ["0.1.7", "Camera primary/guide auto-detection via PHD2"],
+        ["0.1.8-10", "Cooler robust toggle + capture sequence + Activity Log"],
+        ["0.2.0", "Full Ekos clone: 8 modules + multi-job + SIMBAD + autofocus V-curve"],
+        ["0.2.1", "Plate solving via solve-field + Time scheduler + sky_state"],
+        ["0.2.3", "Capture via Ekos DBus (loadSequenceQueue + start)"],
+        ["0.2.4", "FULL OBSERVATION pipeline with 10 pre-flight stages"],
+        ["0.2.7", "Plate solve clone Ekos (full status + bin/gain configurable)"],
+        ["0.2.10", "Plate solve UI redesign (live preview, big action button)"],
+        ["0.2.11", "BLOB intercept zero-invasive (parallel INDI client)"],
+        ["0.2.12", "Auto-stretch identical to KStars/Ekos (ZScale + asinh MTF)"],
     ],
-    col_widths=[2 * cm, 2.5 * cm, 11 * cm]))
+    col_widths=[2.5 * cm, 13 * cm]))
 
 story.append(Spacer(1, 1 * cm))
-story.append(H2("Roadmap futura"))
+story.append(H2("Future roadmap"))
 story.append(ListFlowable([
-    ListItem(P("Polar alignment routine guidata (3-step drift)")),
     ListItem(P("Mosaic planner")),
-    ListItem(P("Notifiche push (frame finito, sequenza completata, weather alert)")),
-    ListItem(P("Donazione codice come integrazione ufficiale a "
+    ListItem(P("Push notifications (frame done, sequence finished, weather alert)")),
+    ListItem(P("Possible upstream contribution to "
                "<font face='Courier'>devDucks/astroarch</font>")),
 ], bulletType="bullet", leftIndent=20))
 
 story.append(Spacer(1, 1.5 * cm))
 story.append(P('<para alignment="center"><font color="#8a93a6">'
-               "— Buone osservazioni —<br/>"
-               "Astroarch Interface · Zarletti-Osservatorio Jupiter"
+               "- Clear skies -<br/>"
+               "Astroarch Interface * Zarletti-Osservatorio Jupiter"
                "</font></para>"))
 
 
-# ----------------------------------------------------------------------------
-# BUILD
-# ----------------------------------------------------------------------------
 def _on_first_page(canvas, doc):
     cover_layout(canvas, doc)
 
@@ -775,10 +778,10 @@ doc = SimpleDocTemplate(
     OUTPUT, pagesize=A4,
     leftMargin=2 * cm, rightMargin=2 * cm,
     topMargin=2 * cm, bottomMargin=1.6 * cm,
-    title="Astroarch Interface - Manuale utente",
+    title="Astroarch Interface - User Manual",
     author="Zarletti-Osservatorio Jupiter",
-    subject="Manuale utente e installazione",
-    creator="Astroarch Interface v0.2.4",
+    subject="User manual and installation guide",
+    creator="Astroarch Interface v0.2.12",
 )
 doc.build(story, onFirstPage=_on_first_page, onLaterPages=_on_later_pages)
 
